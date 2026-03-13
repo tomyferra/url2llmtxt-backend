@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-app = FastAPI(title="URL to TXT Converter API")
+app = FastAPI(title="URL2LLM.txt Converter API")
 
 # Configure CORS
 app.add_middleware(
@@ -30,6 +30,10 @@ app.add_middleware(
 
 # Include routes
 app.include_router(convert.router, tags=["Conversion"])
+
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
 @app.get("/health")
 async def health_check():
