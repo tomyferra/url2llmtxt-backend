@@ -137,7 +137,7 @@ class TextConverterService:
             response = model.generate_content(prompt)
             
             return {
-                "title": f"AI-Enhanced-{title}",
+                "title": f"{title}",
                 "text": response.text
             }
         except Exception as e:

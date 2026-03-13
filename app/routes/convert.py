@@ -16,6 +16,7 @@ class ConvertRequest(BaseModel):
 class ConvertResponse(BaseModel):
     download_url: str
     content: str
+    filename: str
 
 @router.post("/convert", response_model=ConvertResponse)
 async def convert_url_to_txt(request: ConvertRequest):
@@ -49,7 +50,8 @@ async def convert_url_to_txt(request: ConvertRequest):
         
         return ConvertResponse(
             download_url=download_url,
-            content=content_data['text']
+            content=content_data['text'],
+            filename=filename
         )
         
     except HTTPException:
