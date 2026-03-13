@@ -72,7 +72,7 @@ class TextConverterService:
                         ## Section Name
                         6. Extract useful links and format them exactly like this:
 
-                        - [Link title](URL): Short explanation of the link
+                        - [Link title](URL): Short explanation of the link. Make sure the URL is valid and complete (include https:// if missing). If the link is not relevant, omit it.
 
                         7. If a link does not have an explanation, omit the description:
 
