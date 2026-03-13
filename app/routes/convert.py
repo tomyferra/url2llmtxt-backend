@@ -5,6 +5,7 @@ from app.services.text_converter import TextConverterService
 from app.services.storage import StorageService
 import logging
 from datetime import datetime
+import asyncio
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -18,6 +19,8 @@ class ConvertResponse(BaseModel):
 
 @router.post("/convert", response_model=ConvertResponse)
 async def convert_url_to_txt(request: ConvertRequest):
+    loop = asyncio.get_running_loop()
+    logger.info(f"Current event loop type: {type(loop).__name__}")
     logger.info(request)
     try:
         url_str = str(request.url)
