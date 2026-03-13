@@ -36,10 +36,13 @@ async def convert_url_to_txt(request: ConvertRequest):
         if not content_data:
             raise HTTPException(status_code=400, detail="No readable text found on the page.")
             
-        title=content_data['title']
+        title = content_data['title']
+        # Sanitize title: replace spaces/dashes/special chars with hyphens, keep alphanumerics
+        import re
+        safe_title = re.sub(r'[^a-zA-Z0-9]+', '-', title).strip('-')
         datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         # 3. Generate Filename
-        filename = f"{title}-{datetime_now}-llm.txt"
+        filename = f"{safe_title}-{datetime_now}-llm.txt"
         # 4. Upload to Storage
         storage_service = StorageService()
         download_url = await storage_service.upload_text_file(content_data['text'], filename)
