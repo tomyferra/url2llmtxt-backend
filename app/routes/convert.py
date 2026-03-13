@@ -30,8 +30,8 @@ async def convert_url_to_txt(request: ConvertRequest):
         html_content = await ScraperService.fetch_html(url_str)
         logger.info(f"HTML Content: {html_content}")
         # 2. Extract Text
-        #content_data = TextConverterService.ai_enhancer_text(html_content)
-        content_data = TextConverterService.extract_text(html_content)
+        content_data = TextConverterService.ai_enhancer_text(html_content)
+        #content_data = TextConverterService.extract_text(html_content)
 
         if not content_data:
             raise HTTPException(status_code=400, detail="No readable text found on the page.")
