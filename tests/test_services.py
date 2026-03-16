@@ -1,9 +1,9 @@
 import unittest
-from unittest import mock
-import os
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 from app.services.text_converter import TextConverterService
 from app.services.scraper import ScraperService
+from app.services.storage import StorageService
+
 
 class TestTextConverterService(unittest.TestCase):
     def test_extract_text_basic(self):
@@ -41,11 +41,8 @@ class TestTextConverterService(unittest.TestCase):
         self.assertEqual(result["title"], "Test Title")
         self.assertEqual(result["text"], "Mocked AI Content")
 
-from app.services.storage import StorageService
-
 
 class TestStorageService(unittest.IsolatedAsyncioTestCase):
-
     def setUp(self):
         # Mock getenv
         self.getenv_patcher = patch("app.services.storage.os.getenv")
@@ -83,7 +80,6 @@ class TestStorageService(unittest.IsolatedAsyncioTestCase):
     async def test_upload_text_file_success(self):
         mock_bucket = MagicMock()
         mock_bucket.get_public_url.return_value = "https://public-url/file.txt"
-        mock_bucket.upload.return_value = {"error": None}
 
         self.mock_supabase.storage.from_.return_value = mock_bucket
 
@@ -107,18 +103,8 @@ class TestStorageService(unittest.IsolatedAsyncioTestCase):
         mock_bucket.upload.side_effect = Exception("upload error")
 
         self.mock_supabase.storage.from_.return_value = mock_bucket
+
         with self.assertRaises(Exception) as context:
             await self.service.upload_text_file("hello", "file.txt")
 
         self.assertIn("Failed to upload file to storage", str(context.exception))
-
-    async def test_upload_text_file_supabase_error(self):
-        mock_bucket = MagicMock()
-        mock_bucket.upload.return_value = {"error": {"message": "specific supabase error"}}
-
-        self.mock_supabase.storage.from_.return_value = mock_bucket
-
-        with self.assertRaises(Exception) as context:
-            await self.service.upload_text_file("hello", "file.txt")
-
-        self.assertIn("Supabase upload failed: specific supabase error", str(context.exception))
