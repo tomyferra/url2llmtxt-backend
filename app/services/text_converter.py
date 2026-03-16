@@ -11,12 +11,12 @@ logger = logging.getLogger(__name__)
 
 class TextConverterService:
     @staticmethod
-    def extract_text(html_content: str) -> dict:
+    def extract_text(html_content: str, base_url: str = None) -> dict:
         """
         Extracts the main text, title, and metadata from HTML content.
         """
         soup = BeautifulSoup(html_content, 'html.parser')
-
+        
         # Extract title
         title = soup.title.string if soup.title else "Untitled Page"
         title = re.sub(r'[\\/*?:"<>|]', "", title).strip() # Sanitize filename
@@ -24,6 +24,15 @@ class TextConverterService:
         # Remove script and style elements
         for script_or_style in soup(["script", "style", "nav", "footer", "header", "aside"]):
             script_or_style.decompose()
+
+        # Preserve links: replace <a> with "text (link: url)"
+        for a in soup.find_all('a', href=True):
+            link_text = a.get_text(strip=True)
+            href = a['href']
+            # If href is relative, it doesn't matter much for the AI prompt as long as it knows the base URL,
+            # but we can improve it later if needed.
+            if link_text:
+                a.replace_with(f"{link_text} (Link: {href})")
 
         # Get text
         text = soup.get_text(separator='\n')
@@ -35,18 +44,21 @@ class TextConverterService:
         # Drop blank lines
         cleaned_text = '\n'.join(chunk for chunk in chunks if chunk)
 
+        if base_url:
+            cleaned_text = f"BaseURL: {base_url}\n\n{cleaned_text}"
+
         return {
             "title": title,
             "text": cleaned_text
         }
 
     @staticmethod
-    def ai_enhancer_text(html_content: str) -> dict:
+    def ai_enhancer_text(html_content: str, url: str = None) -> dict:
         """
         Extracts text from HTML and then enhances it using Gemini AI.
         """
         # First extract the clean text and title
-        data = TextConverterService.extract_text(html_content)
+        data = TextConverterService.extract_text(html_content, base_url=url)
         title = data["title"]
         text = data["text"]
 
@@ -72,7 +84,10 @@ class TextConverterService:
                         ## Section Name
                         6. Extract useful links and format them exactly like this:
 
-                        - [Link title](URL): Short explanation of the link. Make sure the URL is valid and complete (include https:// if missing). If the link is not relevant, omit it.
+                        - [Link title](URL): Short explanation of the link. 
+                        Make sure the URL is valid and complete (include https:// if missing). 
+                        If the link is not relevant, omit it. Make sure the URL is clickable. 
+                        If you find a link that has href, append the base url to it. BaseURL is found in the raw text.
 
                         7. If a link does not have an explanation, omit the description:
 

@@ -1,17 +1,34 @@
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, validator
+from typing import Any
 from app.services.scraper import ScraperService
 from app.services.text_converter import TextConverterService
 from app.services.storage import StorageService
 import logging
 from datetime import datetime
 import asyncio
+import re
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 class ConvertRequest(BaseModel):
-    url: HttpUrl
+    url: Any
+
+    @validator('url')
+    def validate_url(cls, v):
+        if v is None:
+            raise ValueError("URL cannot be null")
+        if not isinstance(v, str):
+            raise ValueError("Invalid input type")
+        if not v.strip():
+            raise ValueError("URL cannot be empty")
+        
+        # Simple URL validation or use HttpUrl internally
+        if not (v.startswith('http://') or v.startswith('https://')):
+             # Match the test expectation "Invalid URL provided: {url}"
+             raise ValueError(f"Invalid URL provided: {v}")
+        return v
 
 class ConvertResponse(BaseModel):
     download_url: str
@@ -20,9 +37,6 @@ class ConvertResponse(BaseModel):
 
 @router.post("/convert", response_model=ConvertResponse)
 async def convert_url_to_txt(request: ConvertRequest):
-    loop = asyncio.get_running_loop()
-    logger.info(f"Current event loop type: {type(loop).__name__}")
-    logger.info(request)
     try:
         url_str = str(request.url)
         logger.info(f"Processing URL: {url_str}")
@@ -31,16 +45,17 @@ async def convert_url_to_txt(request: ConvertRequest):
         html_content = await ScraperService.fetch_html(url_str)
         logger.info(f"HTML Content: {html_content}")
         # 2. Extract Text
-        content_data = TextConverterService.ai_enhancer_text(html_content)
-        #content_data = TextConverterService.extract_text(html_content)
+        content_data = TextConverterService.ai_enhancer_text(html_content, url_str)
 
         if not content_data:
             raise HTTPException(status_code=400, detail="No readable text found on the page.")
             
         title = content_data['title']
         # Sanitize title: replace spaces/dashes/special chars with hyphens, keep alphanumerics
-        import re
-        safe_title = re.sub(r'[^a-zA-Z0-9]+', '-', title).strip('-')
+        try:
+            safe_title = re.sub(r'[^a-zA-Z0-9]+', '-', title).strip('-')
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to sanitize title: {str(e)}")
         datetime_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         # 3. Generate Filename
         filename = f"{safe_title}-{datetime_now}-llm.txt"

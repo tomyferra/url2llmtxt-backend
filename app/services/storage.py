@@ -34,6 +34,10 @@ class StorageService:
                 file=file_bytes,
                 file_options={"content-type": "text/plain", "x-upsert": "true"}
             )
+            logger.info(f"Supabase upload response: {response}")
+            if response.get("error"):
+                logger.error(f"Supabase upload error: {response['error']}")
+                raise Exception(f"Supabase upload failed: {response['error']['message']}")
             
             # Get the public URL
             public_url = self.supabase.storage.from_(self.bucket_name).get_public_url(filename)
