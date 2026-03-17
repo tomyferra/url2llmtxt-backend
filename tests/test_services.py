@@ -1,8 +1,10 @@
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from app.services.text_converter import TextConverterService
 from app.services.scraper import ScraperService
 from app.services.storage import StorageService
+
+
 
 
 class TestTextConverterService(unittest.TestCase):
@@ -41,35 +43,118 @@ class TestTextConverterService(unittest.TestCase):
         self.assertEqual(result["title"], "Test Title")
         self.assertEqual(result["text"], "Mocked AI Content")
 
+class TestScraperService(unittest.IsolatedAsyncioTestCase):
+    @patch("app.services.scraper.ScraperService._fetch_html_in_thread")
+    async def test_fetch_html(self, mock_fetch_html_in_thread):
+        mock_fetch_html_in_thread.return_value = "<html><body><h1>Test Title</h1><p>Test Content</p></body></html>"
+        url = "https://example.com"
+        html = await ScraperService.fetch_html(url)
+        self.assertIn("Test Title", html)
+        self.assertNotIn("example", html)
+
+    @patch("app.services.scraper.asyncio")
+    @patch("app.services.scraper.ScraperService._fetch_html_impl")
+    def test_fetch_html_in_thread_win32(self, mock_fetch_html_impl, mock_asyncio):
+
+        mock_loop = MagicMock()
+        mock_asyncio.ProactorEventLoop.return_value = mock_loop
+        mock_loop.run_until_complete.return_value = "<html><body><h1>Test Title</h1><p>Test Content</p></body></html>"
+        mock_loop.close.return_value = True
+
+        mock_fetch_html_impl.return_value = "mock_coroutine"
+        url = "https://example.com"
+        html = ScraperService._fetch_html_in_thread(url)
+        self.assertTrue(html)
+
+    @patch("app.services.scraper.asyncio")
+    @patch("app.services.scraper.sys")
+    @patch("app.services.scraper.ScraperService._fetch_html_impl")
+    def test_fetch_html_in_thread_not_win32(self, mock_fetch_html_impl, mock_asyncio, mock_sys):
+
+        mock_sys.platform = "not-win32"
+        mock_loop = MagicMock()
+        mock_asyncio.new_event_loop.return_value = mock_loop
+        mock_loop.run_until_complete.return_value = "<html><body><h1>Test Title</h1><p>Test Content</p></body></html>"
+        mock_loop.close.return_value = True
+
+        mock_fetch_html_impl.return_value = "mock_coroutine"
+        url = "https://example.com"
+        html = ScraperService._fetch_html_in_thread(url)
+        self.assertTrue(html)
+
+    @patch("app.services.scraper.asyncio.sleep")
+    @patch("app.services.scraper.async_playwright")
+    async def test_fetch_html_impl(self, mock_playwright, mock_sleep):
+        # Mock the async context manager
+        mock_p = AsyncMock()
+        mock_playwright.return_value.__aenter__.return_value = mock_p
+        
+        # Mock the browser
+        mock_browser = AsyncMock()
+        mock_p.chromium.launch.return_value = mock_browser
+        
+        # Mock the context
+        mock_context = AsyncMock()
+        mock_browser.new_context.return_value = mock_context
+        
+        # Mock the page
+        mock_page = AsyncMock()
+        mock_context.new_page.return_value = mock_page
+        mock_page.content.return_value = "<html><body><h1>Test Title</h1><p>Test Content</p></body></html>"
+        
+        url = "https://example.com"
+        html = await ScraperService._fetch_html_impl(url)
+        self.assertIn("Test Title", html)
+        self.assertTrue(mock_page.goto.called)
+        self.assertTrue(mock_browser.close.called)
+
+
+def getenv_side_effect(key, default=None):
+    values = {
+        "SUPABASE_URL": "https://test.supabase.co",
+        "SUPABASE_KEY": "test-key",
+        "SUPABASE_BUCKET": "test-bucket",
+    }
+    return values.get(key, default)
 
 class TestStorageService(unittest.IsolatedAsyncioTestCase):
+
     def setUp(self):
-        # Mock getenv
-        self.getenv_patcher = patch("app.services.storage.os.getenv")
-        self.mock_getenv = self.getenv_patcher.start()
-
-        def getenv_side_effect(key, default=None):
-            values = {
-                "SUPABASE_URL": "https://test.supabase.co",
-                "SUPABASE_KEY": "test-key",
-                "SUPABASE_BUCKET": "test-bucket",
-            }
-            return values.get(key, default)
-
-        self.mock_getenv.side_effect = getenv_side_effect
-
-        # Mock supabase client creation
+        self.env_patcher = patch.dict("os.environ", {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_KEY": "test-key",
+            "SUPABASE_BUCKET": "test-bucket",
+        }, clear=True)
+        self.env_patcher.start()
         self.client_patcher = patch("app.services.storage.create_client")
         self.mock_create_client = self.client_patcher.start()
-
         self.mock_supabase = MagicMock()
         self.mock_create_client.return_value = self.mock_supabase
-
         self.service = StorageService()
 
     def tearDown(self):
-        self.getenv_patcher.stop()
+        self.env_patcher.stop()
         self.client_patcher.stop()
+
+    def test_init_no_url(self):
+        with patch.dict("os.environ", {
+            "SUPABASE_URL": "",
+            "SUPABASE_KEY": "test-key",
+            "SUPABASE_BUCKET": "test-bucket",
+        }, clear=True):
+            with self.assertRaises(Exception) as context:
+                StorageService()
+        self.assertEqual(str(context.exception), "Storage configuration missing.")
+
+    def test_init_no_key(self):
+        with patch.dict("os.environ", {
+            "SUPABASE_URL": "https://test.supabase.co",
+            "SUPABASE_KEY": "",
+            "SUPABASE_BUCKET": "test-bucket",
+        }, clear=True):
+            with self.assertRaises(Exception) as context:
+                StorageService()
+        self.assertEqual(str(context.exception), "Storage configuration missing.")
 
     def test_init_success(self):
         self.assertEqual(self.service.url, "https://test.supabase.co/")
