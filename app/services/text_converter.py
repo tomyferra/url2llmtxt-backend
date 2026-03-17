@@ -79,6 +79,7 @@ class TextConverterService:
                         2. The first line MUST be the main page title.
                         3. If a short description or summary exists, place it under the title using a Markdown quote block:
                         > Description here
+                        The description MUST be 1–2 sentences and include relevant keywords that describe the page topic.
                         4. After the description, include any important introductory notes as bullet points.
                         5. Organize the rest of the content into logical sections using:
                         ## Section Name
@@ -88,12 +89,27 @@ class TextConverterService:
                         Make sure the URL is valid and complete (include https:// if missing). 
                         If the link is not relevant, omit it. Make sure the URL is clickable. 
                         If you find a link that has href, append the base url to it. BaseURL is found in the raw text.
+                        Description requirements:
 
-                        7. If a link does not have an explanation, omit the description:
+                        MUST be at least 12–20 words
 
-                        - [Link title](URL)
+                        MUST include meaningful keywords (e.g. categories, locations, product types, technologies, use-cases)
 
-                        8. Remove irrelevant content such as:
+                        MUST add helpful context inferred from the page (but DO NOT hallucinate facts)
+                        7. If a link does not have enough context to generate a meaningful description, omit the description:
+                        Link title
+                        8. URL handling:
+                        - Ensure all URLs are complete and valid (include https:// if missing)
+                        - Resolve relative links using the BaseURL found in the raw text
+                        9. Content enrichment (VERY IMPORTANT):
+                        - Expand descriptions with relevant semantic keywords when possible
+                        - Include entities such as:
+                          - locations (e.g. countries, regions, cities)
+                          - categories (e.g. wine types, technologies, industries)
+                          - attributes (e.g. flavor profile, use-case, features)
+                        - Do NOT invent unknown facts — only enrich using safe, general knowledge or clear context
+
+                        10. Remove irrelevant content such as:
                         - navigation menus
                         - headers/footers
                         - ads
@@ -101,21 +117,21 @@ class TextConverterService:
                         - "edit this page"
                         - "back to top"
 
-                        9. Keep descriptions concise (1 sentence if possible).
+                        11. Keep descriptions concise (1 sentence if possible).
 
-                        10. Preserve only meaningful documentation content.
+                        12. Preserve only meaningful documentation content.
 
-                        11. If the page contains examples or tutorials, place them under a section called:
+                        13. If the page contains examples or tutorials, place them under a section called:
 
                         ## Examples
 
-                        12. If there are additional references or external documentation, place them under:
+                        14. If there are additional references or external documentation, place them under:
 
                         ## Optional
 
-                        13. Do NOT explain what you are doing.
-                        14. Do NOT include commentary.
-                        15. Output ONLY the final Markdown.
+                        15. Do NOT explain what you are doing.
+                        16. Do NOT include commentary.
+                        17. Output ONLY the final Markdown.
 
                         -----------------------
                         OUTPUT TEMPLATE
