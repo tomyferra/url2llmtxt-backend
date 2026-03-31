@@ -44,7 +44,7 @@ async def convert_url_to_txt(request: ConvertRequest):
         # 1. Fetch HTML
         html_content = await ScraperService.fetch_html(url_str)
         # 2. Extract Text
-        logger.info(f"HTML content retrieved: {html_content}...")
+        logger.info(f"HTML content retrieved...")
         content_data = TextConverterService.ai_enhancer_text(html_content, url_str)
         logger.info(f"Content data retrieved: {content_data}...")
         if not content_data:
