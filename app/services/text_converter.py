@@ -165,7 +165,10 @@ class TextConverterService:
                         {text}
                         """
                         
-            response = model.generate_content(prompt)
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(temperature=0)
+            )
             
             return {
                 "title": f"{title}",
