@@ -44,8 +44,9 @@ async def convert_url_to_txt(request: ConvertRequest):
         # 1. Fetch HTML
         html_content = await ScraperService.fetch_html(url_str)
         # 2. Extract Text
+        logger.info(f"HTML content retrieved: {html_content}...")
         content_data = TextConverterService.ai_enhancer_text(html_content, url_str)
-
+        logger.info(f"Content data retrieved: {content_data}...")
         if not content_data:
             raise HTTPException(status_code=400, detail="No readable text found on the page.")
             
@@ -60,8 +61,9 @@ async def convert_url_to_txt(request: ConvertRequest):
         filename = f"{safe_title}-{datetime_now}-llm.txt"
         # 4. Upload to Storage
         storage_service = StorageService()
+        logger.info(f"Uploading file: {filename}...")
         download_url = await storage_service.upload_text_file(content_data['text'], filename)
-        
+        logger.info(f"File uploaded: {download_url}...")
         return ConvertResponse(
             download_url=download_url,
             content=content_data['text'],

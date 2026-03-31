@@ -45,12 +45,14 @@ class ScraperService:
                 page = await context.new_page()
 
                 logger.info(f"Navigating to {url}...")
-                await page.goto(url, wait_until="load", timeout=45000)
+                await page.goto(url, wait_until="networkidle", timeout=45000)
 
-                await asyncio.sleep(2)
-
+                # await asyncio.sleep(5)
+                logger.info(f"Page loaded: {url}")
                 html_content = await page.content()
+                logger.info(f"HTML content: {html_content}")
                 await browser.close()
+                logger.info(f"Browser closed: {url}")
                 return html_content
         except Exception as e:
             logger.error(f"Playwright error details: {type(e).__name__}: {str(e)}")
